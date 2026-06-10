@@ -5,7 +5,8 @@ import { Uniwind } from 'uniwind'
 // system: 跟随系统变化
 // light: 固定为 light 主题
 // dark: 固定为 dark 主题
-const DEFAULT_THEME: 'system' | 'light' | 'dark' = 'system'
+// 音乐播放器使用暗黑科技风，固定为 dark
+const DEFAULT_THEME: 'system' | 'light' | 'dark' = 'dark'
 
 const WebOnlyColorSchemeUpdater = function ({ children }: { children?: ReactNode }) {
   useEffect(() => {
