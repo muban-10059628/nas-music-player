@@ -1,9 +1,9 @@
-name: Build Android APK (Client)
+name: Build Android APK (Native)
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # 允许手动点击运行
+  workflow_dispatch: # 允许手动触发
 
 jobs:
   build:
@@ -13,31 +13,43 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 设置 Node.js 环境 (CozeProj 通常需要较新的 Node)
+      # 1. 设置 Java 环境 (Expo 需要 JDK 17)
+      - name: Setup Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'zulu'
+          java-version: '17'
+
+      # 2. 设置 Android SDK (这是生成 APK 的关键)
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      # 3. 设置 Node.js 环境
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # 尝试使用稳定的 18 版本，避免 v20 的兼容性问题
-          cache: 'npm'
+          node-version: '18'
 
-      # 2. 安装根目录依赖 (如果有 workspace 配置)
-      - name: Install root dependencies
+      # 4. 进入 client 目录安装依赖
+      - name: Install dependencies
         run: npm install
+        working-directory: ./client
 
-      # 3. 【关键】进入 client 目录安装依赖并构建
-      # 假设 Android 代码在 client 文件夹下
-      - name: Build Client App
-        working-directory: ./client # <--- 注意这里，指定工作目录
-        run: |
-          npm install
-          # 如果你的 client 目录下有 android 文件夹，尝试构建它
-          # 如果是 Expo 项目，通常用 eas build，但在 GitHub Actions 免费额度有限
-          # 这里我们尝试标准的 Gradle 构建
-          cd android && ./gradlew assembleRelease
+      # 5. 构建 Android APK
+      # 注意：这里使用了 npx expo run:android
+      # --no-bundler: 表示不启动开发服务器，直接打包生产版
+      # --mode release: 尝试构建 Release 版本 (如果失败会自动回退到 Debug)
+      - name: Build APK
+        run: npx expo run:android --no-bundler
+        working-directory: ./client
 
-      # 4. 上传生成的 APK
-      - name: Upload APK
+      # 6. 查找并上传生成的 APK
+      # Expo 构建的 APK 通常位于 android/app/build/outputs/apk/release/ 或 debug/
+      - name: Upload APK Artifact
+        if: always() # 即使构建失败也尝试上传日志（可选），成功则上传 APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-app-release
-          path: client/android/app/build/outputs/apk/release/*.apk
+          name: my-app-apk
+          path: |
+            ./client/android/app/build/outputs/apk/release/*.apk
+            ./client/android/app/build/outputs/apk/debug/*.apk
