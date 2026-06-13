@@ -1,9 +1,9 @@
-name: Build Android APK (CozeProj Mode)
+name: Build Android APK (Client)
 
 on:
-  workflow_dispatch: # 允许手动触发
   push:
     branches: [ main ]
+  workflow_dispatch: # 允许手动点击运行
 
 jobs:
   build:
@@ -13,25 +13,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Java (如果需要)
-        uses: actions/setup-java@v4
+      # 1. 设置 Node.js 环境 (CozeProj 通常需要较新的 Node)
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          distribution: 'zulu'
-          java-version: '17' # 很多 Android 构建需要 Java 17
+          node-version: '18' # 尝试使用稳定的 18 版本，避免 v20 的兼容性问题
+          cache: 'npm'
 
-      - name: Grant execute permission for script
-        run: chmod +x .cozeproj/scripts/prod_build.sh
+      # 2. 安装根目录依赖 (如果有 workspace 配置)
+      - name: Install root dependencies
+        run: npm install
 
-      - name: Run Build Script
-        run: bash .cozeproj/scripts/prod_build.sh
+      # 3. 【关键】进入 client 目录安装依赖并构建
+      # 假设 Android 代码在 client 文件夹下
+      - name: Build Client App
+        working-directory: ./client # <--- 注意这里，指定工作目录
+        run: |
+          npm install
+          # 如果你的 client 目录下有 android 文件夹，尝试构建它
+          # 如果是 Expo 项目，通常用 eas build，但在 GitHub Actions 免费额度有限
+          # 这里我们尝试标准的 Gradle 构建
+          cd android && ./gradlew assembleRelease
 
-      # 注意：如果上面的脚本成功运行，它应该会生成 APK。
-      # 你需要确认脚本生成的 APK 在哪里，然后上传它。
-      # 假设它生成在根目录或者某个特定文件夹，这里做一个通用的上传尝试：
+      # 4. 上传生成的 APK
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-app-apk
-          path: |
-            **.apk
-            app/build/outputs/apk/**/*.apk
+          name: my-app-release
+          path: client/android/app/build/outputs/apk/release/*.apk
