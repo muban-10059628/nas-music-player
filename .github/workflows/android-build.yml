@@ -13,52 +13,37 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 1. 设置 Java 环境 (Expo 需要 JDK 17)
+      # 关键修改 1：设置正确的 Node.js 版本，解决黄色警告
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18' # 使用稳定的 LTS 版本
+
+      # 关键修改 2：设置 Java 环境 (Expo 需要 JDK 17)
       - name: Setup Java
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 2. 设置 Node.js
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: './client/package-lock.json'
+      # 关键修改 3：设置 Android SDK
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-      # 3. 安装依赖
+      # 关键修改 4：进入 client 目录安装依赖 (不再手动指定缓存路径，避免报错)
       - name: Install dependencies
         run: npm install
         working-directory: ./client
 
-      # 4. 预构建 Android 原生项目 (生成 android 文件夹)
-      - name: Prebuild Android
-        run: npx expo prebuild --platform android --clean
-        working-directory: ./client
-        env:
-          EXPO_NO_GIT_STATUS: 'true' # 防止 git 状态检查报错
-
-      # 5. 构建 APK (关键步骤)
-      # 使用 gradlew 直接构建，比 expo run:android 更稳定，因为它不会尝试启动模拟器
-      - name: Build APK with Gradle
-        run: |
-          chmod +x ./gradlew
-          ./gradlew assembleDebug
-        working-directory: ./client/android
-
-      # 6. 调试步骤：看看文件到底生成在哪了 (如果失败请看这里)
-      - name: Debug - Find APKs
-        if: always()
-        run: find . -name "*.apk"
+      # 关键修改 5：执行打包命令
+      - name: Build Project
+        run: npx expo run:android --no-bundler
         working-directory: ./client
 
-      # 7. 上传产物 (使用通配符搜索)
-      - name: Upload APK Artifact
+      # 关键修改 6：上传生成的 APK
+      - name: Upload APK
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: my-app-debug-apk
-          # 这里使用递归搜索，不管它在哪个子文件夹，只要是以 debug.apk 结尾的都抓出来
-          path: ./client/android/app/build/outputs/apk/**/*.apk
-          retention-days: 5
+          name: android-apk
+          path: ./client/android/app/build/outputs/apk/debug/*.apk
