@@ -19,8 +19,8 @@ jobs:
           node-version: '18'
           cache: 'pnpm'
 
-      - name: Enable pnpm via corepack
-        run: corepack enable && corepack prepare pnpm@latest --activate
+      - name: Install pnpm
+        run: npm install -g pnpm
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile || pnpm install
