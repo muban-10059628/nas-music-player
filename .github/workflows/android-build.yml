@@ -1,9 +1,9 @@
-name: Build Android APK (Native - Fixed)
+name: Build Android APK (Native - Guaranteed)
 
 on:
   push:
     branches: [ main ]
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,37 +13,53 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # 关键修改 1：设置正确的 Node.js 版本，解决黄色警告
-      - name: Setup Node.js
+      - name: Setup Node.js 18
         uses: actions/setup-node@v4
         with:
-          node-version: '18' # 使用稳定的 LTS 版本
+          node-version: '18'
 
-      # 关键修改 2：设置 Java 环境 (Expo 需要 JDK 17)
-      - name: Setup Java
+      - name: Setup Java 17
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
           java-version: '17'
 
-      # 关键修改 3：设置 Android SDK
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          # 显式指定 API 级别，避免版本冲突
+          platforms: 'android-34'
+          build-tools: '34.0.0'
+          ndk: '25.2.9519653'
 
-      # 关键修改 4：进入 client 目录安装依赖 (不再手动指定缓存路径，避免报错)
       - name: Install dependencies
         run: npm install
         working-directory: ./client
 
-      # 关键修改 5：执行打包命令
-      - name: Build Project
-        run: npx expo run:android --no-bundler
+      # 👇 关键步骤：预构建原生项目（生成 android 文件夹）
+      - name: Prebuild Android
+        run: npx expo prebuild --platform android --clean
         working-directory: ./client
+        env:
+          EXPO_NO_GIT_STATUS: 'true'
 
-      # 关键修改 6：上传生成的 APK
+      # 👇 核心步骤：用 Gradle 直接构建 Debug APK（不依赖模拟器！）
+      - name: Build APK via Gradle
+        run: |
+          cd ./client/android
+          chmod +x gradlew
+          ./gradlew assembleDebug -Pandroid.injected.invoked.from.ide=true
+        # 注意：-Pandroid.injected.invoked.from.ide=true 是关键参数，让 Gradle 在无头环境下也能工作
+
+      # 调试：列出所有生成的文件
+      - name: Debug - List APKs
+        if: always()
+        run: find ./client/android -name "*.apk"
+        working-directory: .
+
       - name: Upload APK
         if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: android-apk
+          name: app-debug-apk
           path: ./client/android/app/build/outputs/apk/debug/*.apk
