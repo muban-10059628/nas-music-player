@@ -1,65 +1,64 @@
-name: Build Android APK (Native - Guaranteed)
+name: Build Android APK
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup Node.js 18
+      - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
-      - name: Setup Java 17
+      - name: Setup Java
         uses: actions/setup-java@v4
         with:
-          distribution: 'zulu'
+          distribution: 'temurin'
           java-version: '17'
 
       - name: Setup Android SDK
         uses: android-actions/setup-android@v3
-        with:
-          # 显式指定 API 级别，避免版本冲突
-          platforms: 'android-34'
-          build-tools: '34.0.0'
-          ndk: '25.2.9519653'
 
       - name: Install dependencies
-        run: npm install
-        working-directory: ./client
-
-      # 👇 关键步骤：预构建原生项目（生成 android 文件夹）
-      - name: Prebuild Android
-        run: npx expo prebuild --platform android --clean
-        working-directory: ./client
-        env:
-          EXPO_NO_GIT_STATUS: 'true'
-
-      # 👇 核心步骤：用 Gradle 直接构建 Debug APK（不依赖模拟器！）
-      - name: Build APK via Gradle
         run: |
-          cd ./client/android
-          chmod +x gradlew
-          ./gradlew assembleDebug -Pandroid.injected.invoked.from.ide=true
-        # 注意：-Pandroid.injected.invoked.from.ide=true 是关键参数，让 Gradle 在无头环境下也能工作
+          npm install
+          cd client && npm install && cd ..
 
-      # 调试：列出所有生成的文件
-      - name: Debug - List APKs
-        if: always()
-        run: find ./client/android -name "*.apk"
-        working-directory: .
+      - name: Export Expo app (bundle JS)
+        run: |
+          cd client
+          npx expo export --platform android
+        env:
+          CI: true
+
+      - name: Generate Android project
+        run: |
+          cd client
+          npx expo prebuild --platform android --clean
+        env:
+          CI: true
+
+      - name: Copy bundle to assets
+        run: |
+          mkdir -p client/android/app/src/main/assets
+          cp -r client/dist/* client/android/app/src/main/assets/ 2>/dev/null || true
+
+      - name: Build release APK
+        run: |
+          cd client/android
+          chmod +x gradlew
+          ./gradlew assembleRelease
+        env:
+          JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.11/x64
 
       - name: Upload APK
-        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: app-debug-apk
-          path: ./client/android/app/build/outputs/apk/debug/*.apk
+          name: nas-music-player-apk
+          path: client/android/app/build/outputs/apk/release/app-release.apk
