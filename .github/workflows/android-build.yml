@@ -30,13 +30,6 @@ jobs:
           npm install
           cd client && npm install && cd ..
 
-      - name: Export Expo app (bundle JS)
-        run: |
-          cd client
-          npx expo export --platform android
-        env:
-          CI: true
-
       - name: Generate Android project
         run: |
           cd client
@@ -44,16 +37,11 @@ jobs:
         env:
           CI: true
 
-      - name: Copy bundle to assets
-        run: |
-          mkdir -p client/android/app/src/main/assets
-          cp -r client/dist/* client/android/app/src/main/assets/ 2>/dev/null || true
-
-      - name: Build release APK
+      - name: Build debug APK
         run: |
           cd client/android
           chmod +x gradlew
-          ./gradlew assembleRelease
+          ./gradlew assembleDebug
         env:
           JAVA_HOME: /opt/hostedtoolcache/Java_Temurin-Hotspot_jdk/17.0.11/x64
 
@@ -61,4 +49,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: nas-music-player-apk
-          path: client/android/app/build/outputs/apk/release/app-release.apk
+          path: client/android/app/build/outputs/apk/debug/app-debug.apk
