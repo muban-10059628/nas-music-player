@@ -18,88 +18,84 @@ const CYBER = {
 };
 
 export default function SettingsScreen() {
-  const [nasConfig, setNasConfig] = useState({
-    host: '',
-    port: '445',
+  const [navConfig, setNavConfig] = useState({
+    url: '',
     username: '',
     password: '',
-    musicPath: '/Music',
     enabled: false,
   });
   const [testing, setTesting] = useState(false);
 
   useEffect(() => {
-    fetchNasConfig();
+    fetchNavConfig();
   }, []);
 
-  const fetchNasConfig = async () => {
+  const fetchNavConfig = async () => {
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/nas/config`);
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/nav/config`);
       const data = await res.json();
-      setNasConfig({
-        ...data,
-        password: '', // Don't show password
+      setNavConfig({
+        url: data.url || '',
+        username: data.username || '',
+        password: '',
+        enabled: data.enabled || false,
       });
     } catch (err) {
-      console.error('Failed to fetch NAS config:', err);
+      console.error('Failed to fetch Navidrome config:', err);
     }
   };
 
-  const saveNasConfig = async () => {
+  const saveNavConfig = async () => {
     try {
-      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/nas/config`, {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/nav/config`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          host: nasConfig.host,
-          port: parseInt(nasConfig.port) || 445,
-          username: nasConfig.username,
-          password: nasConfig.password,
-          musicPath: nasConfig.musicPath,
+          url: navConfig.url,
+          username: navConfig.username,
+          password: navConfig.password,
         }),
       });
       const data = await res.json();
-      
       if (data.success) {
-        Alert.alert('成功', 'NAS 配置已保存');
-        fetchNasConfig();
+        Alert.alert('成功', 'Navidrome 配置已保存');
+        fetchNavConfig();
       }
     } catch (err) {
-      console.error('Failed to save NAS config:', err);
-      Alert.alert('错误', '保存 NAS 配置失败');
+      console.error('Failed to save Navidrome config:', err);
+      Alert.alert('错误', '保存配置失败，请检查网络连接');
     }
   };
 
   const testConnection = async () => {
     setTesting(true);
-    // 模拟测试
-    setTimeout(() => {
-      setTesting(false);
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/nav/test`, {
+        method: 'POST',
+      });
+      const data = await res.json();
       Alert.alert(
-        nasConfig.host ? '连接成功' : '请输入 NAS 地址',
-        nasConfig.host 
-          ? `已成功连接到 ${nasConfig.host}` 
-          : '请先填写 NAS 连接信息'
+        data.success ? '连接成功' : '连接失败',
+        data.message
       );
-    }, 1500);
+    } catch (err) {
+      Alert.alert('连接失败', '无法连接到服务器');
+    }
+    setTesting(false);
   };
 
   const clearCache = () => {
-    Alert.alert(
-      '清除缓存',
-      '确定要清除所有缓存数据吗？',
-      [
-        { text: '取消', style: 'cancel' },
-        {
-          text: '清除',
-          style: 'destructive',
-          onPress: async () => {
-            await AsyncStorage.clear();
-            Alert.alert('成功', '缓存已清除');
-          },
+    Alert.alert('清除缓存', '确定要清除所有缓存数据吗？', [
+      { text: '取消', style: 'cancel' },
+      {
+        text: '清除',
+        style: 'destructive',
+        onPress: async () => {
+          await AsyncStorage.clear();
+          Alert.alert('成功', '缓存已清除');
         },
-      ]
-    );
+      },
+    ]);
   };
 
   return (
@@ -111,36 +107,35 @@ export default function SettingsScreen() {
             <Text style={styles.headerTitle}>设置</Text>
           </View>
 
-          {/* NAS Settings */}
+          {/* Navidrome Settings */}
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Ionicons name="server" size={20} color={CYBER.primary} />
-              <Text style={styles.sectionTitle}>NAS 连接</Text>
+              <Text style={styles.sectionTitle}>Navidrome 连接</Text>
             </View>
-            
+
             <View style={styles.card}>
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>NAS 地址</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="192.168.1.100"
-                  placeholderTextColor={CYBER.muted}
-                  value={nasConfig.host}
-                  onChangeText={(text) => setNasConfig({ ...nasConfig, host: text })}
-                  keyboardType="url"
-                  autoCapitalize="none"
-                />
+              <View style={styles.statusBar}>
+                <View style={[
+                  styles.statusDot,
+                  navConfig.enabled ? styles.statusOnline : styles.statusOffline,
+                ]} />
+                <Text style={styles.statusText}>
+                  {navConfig.enabled ? '已连接' : '未连接'}
+                </Text>
               </View>
 
               <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>端口</Text>
+                <Text style={styles.inputLabel}>服务器地址</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="445"
+                  placeholder="http://192.168.1.100:4533"
                   placeholderTextColor={CYBER.muted}
-                  value={nasConfig.port}
-                  onChangeText={(text) => setNasConfig({ ...nasConfig, port: text })}
-                  keyboardType="number-pad"
+                  value={navConfig.url}
+                  onChangeText={(text) => setNavConfig({ ...navConfig, url: text })}
+                  keyboardType="url"
+                  autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
 
@@ -150,9 +145,10 @@ export default function SettingsScreen() {
                   style={styles.input}
                   placeholder="admin"
                   placeholderTextColor={CYBER.muted}
-                  value={nasConfig.username}
-                  onChangeText={(text) => setNasConfig({ ...nasConfig, username: text })}
+                  value={navConfig.username}
+                  onChangeText={(text) => setNavConfig({ ...navConfig, username: text })}
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
 
@@ -160,24 +156,21 @@ export default function SettingsScreen() {
                 <Text style={styles.inputLabel}>密码</Text>
                 <TextInput
                   style={styles.input}
-                  placeholder="输入密码"
+                  placeholder="输入 Navidrome 密码"
                   placeholderTextColor={CYBER.muted}
-                  value={nasConfig.password}
-                  onChangeText={(text) => setNasConfig({ ...nasConfig, password: text })}
+                  value={navConfig.password}
+                  onChangeText={(text) => setNavConfig({ ...navConfig, password: text })}
                   secureTextEntry
                   autoCapitalize="none"
+                  autoCorrect={false}
                 />
               </View>
 
-              <View style={styles.inputGroup}>
-                <Text style={styles.inputLabel}>音乐路径</Text>
-                <TextInput
-                  style={styles.input}
-                  placeholder="/Music"
-                  placeholderTextColor={CYBER.muted}
-                  value={nasConfig.musicPath}
-                  onChangeText={(text) => setNasConfig({ ...nasConfig, musicPath: text })}
-                />
+              <View style={styles.hint}>
+                <Ionicons name="information-circle" size={16} color={CYBER.muted} />
+                <Text style={styles.hintText}>
+                  支持所有 Subsonic 协议的服务器（Navidrome、Airsonic、Gonic 等）
+                </Text>
               </View>
 
               <View style={styles.buttonRow}>
@@ -192,10 +185,7 @@ export default function SettingsScreen() {
                   </Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.saveButton}
-                  onPress={saveNasConfig}
-                >
+                <TouchableOpacity style={styles.saveButton} onPress={saveNavConfig}>
                   <Ionicons name="save" size={18} color={CYBER.bg} />
                   <Text style={styles.saveButtonText}>保存</Text>
                 </TouchableOpacity>
@@ -209,20 +199,12 @@ export default function SettingsScreen() {
               <Ionicons name="musical-notes" size={20} color={CYBER.primary} />
               <Text style={styles.sectionTitle}>播放设置</Text>
             </View>
-            
+
             <View style={styles.card}>
               <TouchableOpacity style={styles.settingItem}>
                 <View style={styles.settingInfo}>
                   <Text style={styles.settingTitle}>流媒体音质</Text>
-                  <Text style={styles.settingDesc}>高音质 (320kbps)</Text>
-                </View>
-                <Ionicons name="chevron-forward" size={20} color={CYBER.muted} />
-              </TouchableOpacity>
-
-              <TouchableOpacity style={styles.settingItem}>
-                <View style={styles.settingInfo}>
-                  <Text style={styles.settingTitle}>缓存设置</Text>
-                  <Text style={styles.settingDesc}>智能缓存已启用</Text>
+                  <Text style={styles.settingDesc}>由 Navidrome 控制</Text>
                 </View>
                 <Ionicons name="chevron-forward" size={20} color={CYBER.muted} />
               </TouchableOpacity>
@@ -235,16 +217,11 @@ export default function SettingsScreen() {
               <Ionicons name="information-circle" size={20} color={CYBER.primary} />
               <Text style={styles.sectionTitle}>关于</Text>
             </View>
-            
+
             <View style={styles.card}>
               <View style={styles.infoRow}>
                 <Text style={styles.infoLabel}>版本</Text>
                 <Text style={styles.infoValue}>1.0.0</Text>
-              </View>
-              
-              <View style={styles.infoRow}>
-                <Text style={styles.infoLabel}>构建</Text>
-                <Text style={styles.infoValue}>2024.01</Text>
               </View>
 
               <TouchableOpacity style={styles.settingItem} onPress={clearCache}>
@@ -306,6 +283,31 @@ const styles = StyleSheet.create({
     borderColor: CYBER.border,
     padding: 16,
   },
+  statusBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: CYBER.border,
+  },
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  statusOnline: {
+    backgroundColor: CYBER.success,
+  },
+  statusOffline: {
+    backgroundColor: CYBER.muted,
+  },
+  statusText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: CYBER.text,
+  },
   inputGroup: {
     marginBottom: 16,
   },
@@ -326,6 +328,18 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 15,
     color: CYBER.text,
+  },
+  hint: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 6,
+    marginBottom: 16,
+  },
+  hintText: {
+    flex: 1,
+    fontSize: 12,
+    color: CYBER.muted,
+    lineHeight: 18,
   },
   buttonRow: {
     flexDirection: 'row',
@@ -401,3 +415,4 @@ const styles = StyleSheet.create({
     color: CYBER.text,
   },
 });
+                                                                                                  

@@ -137,11 +137,16 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     stateRef.current.setCurrentSong(song);
     stateRef.current.setQueueIndex(index);
     
-    // 添加到最近播放
+    // 添加到最近播放（发送完整信息，因为服务端不再维护歌曲数据库）
     fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/recent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ songId: song.id }),
+      body: JSON.stringify({
+        songId: song.id,
+        title: song.title,
+        artist: song.artist,
+        coverUrl: song.coverUrl,
+      }),
     }).catch(console.error);
   }, []);
 
@@ -304,9 +309,4 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   }, [playMode, setPlayMode]);
 
   // 设置音量
-  const setVolume = useCallback(async (vol: number) => {
-    setVolumeState(vol);
-    if (soundRef.current) {
-      await soundRef.current.setVolumeAsync(vol);
-    }
-    AsyncStorage.setItem('player_volume', vol.toString());
+  const setVolume = useCallback(async (vol: number) 
