@@ -189,11 +189,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // 播放歌曲
   const play = useCallback(async (song?: Song) => {
     if (song) {
-      // 播放指定歌曲
-      setQueueState([song]);
+      // 先同步 ref 再调用 playSongAtIndex，避免 React state batch 延迟导致读不到新队列
+      const newQueue = [song];
+      stateRef.current.queue = newQueue;
+      stateRef.current.queueIndex = 0;
+      setQueueState(newQueue);
+      setQueueIndex(0);
       await playSongAtIndex(0);
     } else if (queue.length > 0) {
-      // 继续播放当前队列
       await playSongAtIndex(queueIndex);
     }
   }, [playSongAtIndex, queue, queueIndex]);
@@ -214,7 +217,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // 切换播放/暂停
   const togglePlayPause = useCallback(async () => {
-    const { queue: currentQueue, queueIndex: currentIndex, volume: currentVolume } = stateRef.current;
+    const { queue: currentQueue, queueIndex: currentIndex } = stateRef.current;
     
     if (soundRef.current) {
       const status = await soundRef.current.getStatusAsync();
@@ -246,9 +249,17 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
   // 上一首
   const previous = useCallback(async () => {
     const { queueIndex: currentIndex, queue: currentQueue } = stateRef.current;
-    
-    // 如果播放超过3秒，重播当前歌曲；否则播放上一首
-    if (stateRef.current.position > 3000) {
+
+    // 从 audio 实例读取真实位置，判断是否超过 3 秒
+    let currentPos = 0;
+    if (soundRef.current) {
+      const status = await soundRef.current.getStatusAsync();
+      if (status.isLoaded) {
+        currentPos = status.positionMillis;
+      }
+    }
+
+    if (currentPos > 3000) {
       if (soundRef.current) {
         await soundRef.current.setPositionAsync(0);
       }
@@ -268,6 +279,9 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // 设置队列
   const setQueue = useCallback((songs: Song[], startIndex: number = 0) => {
+    // 先同步 ref 再播放，避免 React state batch 延迟
+    stateRef.current.queue = songs;
+    stateRef.current.queueIndex = startIndex;
     setQueueState(songs);
     setQueueIndex(startIndex);
     if (songs.length > 0) {
@@ -296,34 +310,3 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       await soundRef.current.setVolumeAsync(vol);
     }
     AsyncStorage.setItem('player_volume', vol.toString());
-  }, []);
-
-  return (
-    <PlayerContext.Provider
-      value={{
-        currentSong,
-        isPlaying,
-        queue,
-        queueIndex,
-        playMode,
-        play,
-        pause,
-        resume,
-        togglePlayPause,
-        next,
-        previous,
-        seek,
-        setQueue,
-        setPlayMode,
-        togglePlayMode,
-        volume,
-        setVolume,
-      }}
-    >
-      {children}
-    </PlayerContext.Provider>
-  );
-}
-
-export function usePlayer() {
-  const con
