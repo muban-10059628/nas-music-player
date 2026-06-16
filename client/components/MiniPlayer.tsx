@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { usePlaybackState } from '@/contexts/PlaybackStateContext';
 
 // 霓虹科技风颜色常量
 const CYBER = {
@@ -24,7 +25,8 @@ interface MiniPlayerProps {
 
 export default function MiniPlayer({ onPress }: MiniPlayerProps) {
   const router = useSafeRouter();
-  const { currentSong, isPlaying, togglePlayPause, next, position, duration } = usePlayer();
+  const { currentSong, isPlaying, togglePlayPause, next } = usePlayer();
+  const { position, duration } = usePlaybackState();
 
   if (!currentSong) return null;
 
@@ -140,10 +142,3 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   controls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  controlButton: {
-    padding: 8,
-  },
-});

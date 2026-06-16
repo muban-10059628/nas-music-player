@@ -1,4 +1,4 @@
-import { View, Text, Image, TouchableOpacity, FlatList, TextInput, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, TextInput, ScrollView, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -106,77 +106,73 @@ export default function SearchScreen() {
             <Text style={styles.emptyText}>输入关键词开始搜索</Text>
           </View>
         ) : (
-          <FlatList
-            data={[]}
-            renderItem={null}
-            ListHeaderComponent={
-              <>
-                {/* Albums */}
-                {results.albums.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>专辑</Text>
-                    {results.albums.map((album) => (
-                      <TouchableOpacity
-                        key={album.id}
-                        style={styles.albumItem}
-                        onPress={() => handleAlbumPress(album)}
-                      >
-                        <Image source={{ uri: album.coverUrl }} style={styles.albumCover} />
-                        <View style={styles.albumInfo}>
-                          <Text style={styles.albumTitle} numberOfLines={1}>{album.title}</Text>
-                          <Text style={styles.albumArtist}>{album.artist} · {album.year}</Text>
-                        </View>
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {/* Artists */}
-                {results.artists.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>艺术家</Text>
-                    {results.artists.map((artist) => (
-                      <TouchableOpacity
-                        key={artist.id}
-                        style={styles.artistItem}
-                        onPress={() => handleArtistPress(artist)}
-                      >
-                        <View style={styles.artistAvatar}>
-                          <Text style={styles.artistInitial}>{artist.name.charAt(0)}</Text>
-                        </View>
-                        <Text style={styles.artistName} numberOfLines={1}>{artist.name}</Text>
-                        <Ionicons name="chevron-forward" size={18} color={CYBER.muted} />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-
-                {/* Songs */}
-                {results.songs.length > 0 && (
-                  <View style={styles.section}>
-                    <Text style={styles.sectionTitle}>歌曲</Text>
-                    {results.songs.map((song, index) => (
-                      <TouchableOpacity
-                        key={song.id}
-                        style={styles.songItem}
-                        onPress={() => handleSongPress(song, index)}
-                      >
-                        <Image source={{ uri: song.coverUrl }} style={styles.songCover} />
-                        <View style={styles.songInfo}>
-                          <Text style={styles.songTitle} numberOfLines={1}>{song.title}</Text>
-                          <Text style={styles.songArtist} numberOfLines={1}>
-                            {song.artist} · {song.album}
-                          </Text>
-                        </View>
-                        <Ionicons name="play" size={20} color={CYBER.primary} />
-                      </TouchableOpacity>
-                    ))}
-                  </View>
-                )}
-              </>
-            }
+          <ScrollView
             contentContainerStyle={styles.listContent}
-          />
+            showsVerticalScrollIndicator={false}
+          >
+            {/* Albums */}
+            {results.albums.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>专辑</Text>
+                {results.albums.map((album) => (
+                  <TouchableOpacity
+                    key={album.id}
+                    style={styles.albumItem}
+                    onPress={() => handleAlbumPress(album)}
+                  >
+                    <Image source={{ uri: album.coverUrl }} style={styles.albumCover} />
+                    <View style={styles.albumInfo}>
+                      <Text style={styles.albumTitle} numberOfLines={1}>{album.title}</Text>
+                      <Text style={styles.albumArtist}>{album.artist} · {album.year}</Text>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Artists */}
+            {results.artists.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>艺术家</Text>
+                {results.artists.map((artist) => (
+                  <TouchableOpacity
+                    key={artist.id}
+                    style={styles.artistItem}
+                    onPress={() => handleArtistPress(artist)}
+                  >
+                    <View style={styles.artistAvatar}>
+                      <Text style={styles.artistInitial}>{artist.name.charAt(0)}</Text>
+                    </View>
+                    <Text style={styles.artistName} numberOfLines={1}>{artist.name}</Text>
+                    <Ionicons name="chevron-forward" size={18} color={CYBER.muted} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+
+            {/* Songs */}
+            {results.songs.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>歌曲</Text>
+                {results.songs.map((song, index) => (
+                  <TouchableOpacity
+                    key={song.id}
+                    style={styles.songItem}
+                    onPress={() => handleSongPress(song, index)}
+                  >
+                    <Image source={{ uri: song.coverUrl }} style={styles.songCover} />
+                    <View style={styles.songInfo}>
+                      <Text style={styles.songTitle} numberOfLines={1}>{song.title}</Text>
+                      <Text style={styles.songArtist} numberOfLines={1}>
+                        {song.artist} · {song.album}
+                      </Text>
+                    </View>
+                    <Ionicons name="play" size={20} color={CYBER.primary} />
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </ScrollView>
         )}
 
         <MiniPlayer />
@@ -329,3 +325,4 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 });
+                                                                                                                                                                                                                                                                                                 

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   Platform,
   StyleSheet,
@@ -161,16 +161,15 @@ const RawScreen = ({
   }, []);
 
   // 自动检测：若子树中包含 ScrollView/FlatList/SectionList，则认为页面自身处理滚动
-  const isNodeScrollable = (node: React.ReactNode): boolean => {
+  // 使用缓存确保同一组件生命周期内只检查一次——children 类型不会随状态变化改变
+  const childIsNativeScrollableRef = useRef<boolean | null>(null);
+  if (childIsNativeScrollableRef.current === null) {
     const isScrollableElement = (el: unknown): boolean => {
       if (!React.isValidElement(el)) return false;
       const element = el as React.ReactElement<any, any>;
       const t = element.type;
-      // 不递归检查 Modal 内容，避免将弹窗内的 ScrollView 误判为页面已具备垂直滚动
       if (t === Modal) return false;
       const props = element.props as Record<string, unknown> | undefined;
-      // 仅识别“垂直”滚动容器；横向滚动不视为页面已处理垂直滚动
-      // eslint-disable-next-line react/prop-types
       const isHorizontal = !!(props && props.horizontal === true);
       if ((t === ScrollView || t === FlatList || t === SectionList) && !isHorizontal) return true;
       const c: React.ReactNode | undefined = props && 'children' in props
@@ -179,11 +178,11 @@ const RawScreen = ({
       if (Array.isArray(c)) return c.some(isScrollableElement);
       return c ? isScrollableElement(c) : false;
     };
-    if (Array.isArray(node)) return node.some(isScrollableElement);
-    return isScrollableElement(node);
-  };
-
-  const childIsNativeScrollable = isNodeScrollable(children);
+    childIsNativeScrollableRef.current = Array.isArray(children)
+      ? children.some(isScrollableElement)
+      : isScrollableElement(children);
+  }
+  const childIsNativeScrollable = childIsNativeScrollableRef.current;
 
   // 说明：避免双重补白
   // KeyboardAwareScrollView 内部会自动处理键盘高度。
@@ -315,3 +314,4 @@ const styles = StyleSheet.create({
 });
 
 export const Screen = withUniwind(RawScreen);
+                               

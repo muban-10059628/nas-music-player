@@ -1,4 +1,4 @@
-import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet, Alert } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, TextInput, Modal, StyleSheet, Alert } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
@@ -202,8 +202,7 @@ function CreatePlaylistModal({ onClose, onSubmit }: any) {
   );
 }
 
-import { TextInput, Modal } from 'react-native';
-
+// Fix: Modal imported at top; TextInput imported at top
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -377,6 +376,4 @@ const styles = StyleSheet.create({
   modalSubmitText: {
     fontSize: 14,
     fontWeight: '700',
-    color: CYBER.bg,
-  },
-});
+    c

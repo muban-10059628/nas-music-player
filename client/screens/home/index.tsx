@@ -1,11 +1,11 @@
-import { View, Text, Image, TouchableOpacity, FlatList, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, FlatList, ScrollView, StyleSheet } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { Screen } from '@/components/Screen';
 import MiniPlayer from '@/components/MiniPlayer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, memo, useCallback } from 'react';
 
 const CYBER = {
   primary: '#00F0FF',
@@ -36,7 +36,7 @@ interface Album {
 
 export default function HomeScreen() {
   const router = useSafeRouter();
-  const { currentSong, isPlaying, play, togglePlayPause } = usePlayer();
+  const { play } = usePlayer();
   const [recentPlays, setRecentPlays] = useState<RecentItem[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
 
@@ -77,99 +77,102 @@ export default function HomeScreen() {
     }
   };
 
-  const handleAlbumPress = (album: Album) => {
+  const handleAlbumPress = useCallback((album: Album) => {
     router.push('/album', { id: album.id });
-  };
+  }, [router]);
 
-  const renderRecentItem = ({ item }: { item: RecentItem }) => (
-    <TouchableOpacity 
-      style={styles.recentItem}
-      onPress={() => play(item as any)}
-    >
+  const handlePlaySong = useCallback((item: RecentItem) => {
+    play(item as any);
+  }, [play]);
+
+  // 使用 memo 化的列表项组件，避免每次滚动重新创建函数
+  const RecentItem = memo(({ item, onPress }: { item: RecentItem; onPress: (item: RecentItem) => void }) => (
+    <TouchableOpacity style={styles.recentItem} onPress={() => onPress(item)}>
       <Image source={{ uri: item.coverUrl }} style={styles.recentCover} />
       <View style={styles.recentInfo}>
         <Text style={styles.recentTitle} numberOfLines={1}>{item.title}</Text>
         <Text style={styles.recentArtist} numberOfLines={1}>{item.artist}</Text>
       </View>
     </TouchableOpacity>
-  );
+  ));
 
-  const renderAlbum = ({ item }: { item: Album }) => (
-    <TouchableOpacity 
-      style={styles.albumCard}
-      onPress={() => handleAlbumPress(item)}
-    >
+  const AlbumItem = memo(({ item, onPress }: { item: Album; onPress: (item: Album) => void }) => (
+    <TouchableOpacity style={styles.albumCard} onPress={() => onPress(item)}>
       <Image source={{ uri: item.coverUrl }} style={styles.albumCover} />
       <Text style={styles.albumTitle} numberOfLines={1}>{item.title}</Text>
       <Text style={styles.albumArtist} numberOfLines={1}>{item.artist}</Text>
     </TouchableOpacity>
-  );
+  ));
+
+  const renderRecentItem = useCallback(({ item }: { item: RecentItem }) => (
+    <RecentItem item={item} onPress={handlePlaySong} />
+  ), [handlePlaySong]);
+
+  const renderAlbum = useCallback(({ item }: { item: Album }) => (
+    <AlbumItem item={item} onPress={handleAlbumPress} />
+  ), [handleAlbumPress]);
 
   return (
     <Screen>
       <View style={styles.container}>
-        <FlatList
-          data={[]}
-          renderItem={null}
-          ListHeaderComponent={
-            <>
-              {/* Header */}
-              <LinearGradient
-                colors={[CYBER.card, CYBER.bg]}
-                style={styles.header}
-              >
-                <Text style={styles.logo}>NAS</Text>
-                <Text style={styles.title}>音乐播放器</Text>
-                <Text style={styles.subtitle}>连接 NAS · 畅享音乐</Text>
-              </LinearGradient>
-
-              {/* Quick Actions */}
-              <View style={styles.quickActions}>
-                <TouchableOpacity style={styles.playAllButton} onPress={handlePlayAll}>
-                  <LinearGradient
-                    colors={[CYBER.primary, CYBER.secondary]}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 0 }}
-                    style={styles.playAllGradient}
-                  >
-                    <Ionicons name="play" size={20} color={CYBER.bg} />
-                    <Text style={styles.playAllText}>播放全部</Text>
-                  </LinearGradient>
-                </TouchableOpacity>
-              </View>
-
-              {/* Recent Plays */}
-              {recentPlays.length > 0 && (
-                <View style={styles.section}>
-                  <Text style={styles.sectionTitle}>最近播放</Text>
-                  <FlatList
-                    horizontal
-                    data={recentPlays}
-                    renderItem={renderRecentItem}
-                    keyExtractor={(item) => item.id}
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.recentList}
-                  />
-                </View>
-              )}
-
-              {/* Featured Albums */}
-              <View style={styles.section}>
-                <Text style={styles.sectionTitle}>推荐专辑</Text>
-                <FlatList
-                  horizontal
-                  data={albums}
-                  renderItem={renderAlbum}
-                  keyExtractor={(item) => item.id}
-                  showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.albumsList}
-                />
-              </View>
-            </>
-          }
+        <ScrollView
           contentContainerStyle={styles.listContent}
-        />
-        
+          showsVerticalScrollIndicator={false}
+        >
+          {/* Header */}
+          <LinearGradient
+            colors={[CYBER.card, CYBER.bg]}
+            style={styles.header}
+          >
+            <Text style={styles.logo}>NAS</Text>
+            <Text style={styles.title}>音乐播放器</Text>
+            <Text style={styles.subtitle}>连接 NAS · 畅享音乐</Text>
+          </LinearGradient>
+
+          {/* Quick Actions */}
+          <View style={styles.quickActions}>
+            <TouchableOpacity style={styles.playAllButton} onPress={handlePlayAll}>
+              <LinearGradient
+                colors={[CYBER.primary, CYBER.secondary]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+                style={styles.playAllGradient}
+              >
+                <Ionicons name="play" size={20} color={CYBER.bg} />
+                <Text style={styles.playAllText}>播放全部</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+          </View>
+
+          {/* Recent Plays */}
+          {recentPlays.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>最近播放</Text>
+              <FlatList
+                horizontal
+                data={recentPlays}
+                renderItem={renderRecentItem}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recentList}
+              />
+            </View>
+          )}
+
+          {/* Featured Albums */}
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>推荐专辑</Text>
+            <FlatList
+              horizontal
+              data={albums}
+              renderItem={renderAlbum}
+              keyExtractor={(item) => item.id}
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.albumsList}
+            />
+          </View>
+        </ScrollView>
+
         <MiniPlayer />
       </View>
     </Screen>
@@ -283,20 +286,4 @@ const styles = StyleSheet.create({
   },
   albumCover: {
     width: 140,
-    height: 140,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: CYBER.border,
-    marginBottom: 8,
-  },
-  albumTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: CYBER.text,
-  },
-  albumArtist: {
-    fontSize: 11,
-    color: CYBER.muted,
-    marginTop: 2,
-  },
-});
+  

@@ -41,7 +41,7 @@ interface Song {
 export default function AlbumScreen() {
   const router = useSafeRouter();
   const { id } = useSafeSearchParams<{ id: string }>();
-  const { play, setQueue } = usePlayer();
+  const { setQueue } = usePlayer();
   const [album, setAlbum] = useState<Album | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -114,7 +114,7 @@ export default function AlbumScreen() {
     <Screen>
       <View style={styles.container}>
         {/* Background */}
-        <Image source={{ uri: album.coverUrl }} style={styles.backgroundImage} blurRadius={30} />
+        <Image source={{ uri: album.coverUrl }} style={styles.backgroundImage} blurRadius={8} />
         <LinearGradient colors={['rgba(10, 10, 15, 0.5)', CYBER.bg]} style={styles.gradient} />
 
         {/* Header */}
@@ -337,3 +337,4 @@ const styles = StyleSheet.create({
     fontFamily: 'monospace',
   },
 });
+       

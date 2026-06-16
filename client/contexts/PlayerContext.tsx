@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useRef, useCallback, useEffect } from 'react';
 import { Audio, AVPlaybackStatus } from 'expo-av';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { usePlaybackStateUpdaters } from './PlaybackStateContext';
 
 interface Song {
   id: string;
@@ -13,12 +14,10 @@ interface Song {
 }
 
 interface PlayerContextType {
-  // 当前播放
+  // 当前播放（排除了高频更新的 position/duration，改用 usePlaybackState()）
   currentSong: Song | null;
   isPlaying: boolean;
-  position: number;
-  duration: number;
-  
+
   // 播放队列
   queue: Song[];
   queueIndex: number;
@@ -50,15 +49,16 @@ const PlayerContext = createContext<PlayerContextType | null>(null);
 export function PlayerProvider({ children }: { children: React.ReactNode }) {
   const [currentSong, setCurrentSong] = useState<Song | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [position, setPosition] = useState(0);
-  const [duration, setDuration] = useState(0);
   const [queue, setQueueState] = useState<Song[]>([]);
   const [queueIndex, setQueueIndex] = useState(0);
   const [playMode, setPlayModeState] = useState<'order' | 'shuffle' | 'repeat'>('order');
   const [volume, setVolumeState] = useState(1.0);
-  
+
   const soundRef = useRef<Audio.Sound | null>(null);
-  
+
+  // 从 PlaybackStateContext 获取高频更新状态，避免 PlayerContext 全局重渲染
+  const { setPosition, setDuration } = usePlaybackStateUpdaters();
+
   // 使用 ref 存储回调，避免循环依赖
   const stateRef = useRef({
     queue: [] as Song[],
@@ -73,15 +73,14 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
     setCurrentSong,
     setQueueIndex,
   });
-  
-  // 更新 ref
+
+  // 更新 ref（注意：去掉了 position——它只需在 onPlaybackStatusUpdate 中通过 ref 写入）
   useEffect(() => {
     stateRef.current.queue = queue;
     stateRef.current.queueIndex = queueIndex;
     stateRef.current.playMode = playMode;
     stateRef.current.volume = volume;
-    stateRef.current.position = position;
-  }, [queue, queueIndex, playMode, volume, position]);
+  }, [queue, queueIndex, playMode, volume]);
 
   // 初始化音频
   useEffect(() => {
@@ -148,7 +147,7 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 
   // 处理歌曲结束
   const handleSongEnd = useCallback(async () => {
-    const { queue: currentQueue, queueIndex: currentIndex, playMode: currentMode, volume: currentVolume } = stateRef.current;
+    const { queue: currentQueue, queueIndex: currentIndex, playMode: currentMode } = stateRef.current;
     
     if (currentMode === 'repeat') {
       // 单曲循环
@@ -304,8 +303,6 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentSong,
         isPlaying,
-        position,
-        duration,
         queue,
         queueIndex,
         playMode,
@@ -329,9 +326,4 @@ export function PlayerProvider({ children }: { children: React.ReactNode }) {
 }
 
 export function usePlayer() {
-  const context = useContext(PlayerContext);
-  if (!context) {
-    throw new Error('usePlayer must be used within a PlayerProvider');
-  }
-  return context;
-}
+  const con

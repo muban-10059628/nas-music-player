@@ -3,6 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
+import { usePlaybackState } from '@/contexts/PlaybackStateContext';
 import { Screen } from '@/components/Screen';
 import { useState } from 'react';
 
@@ -29,8 +30,6 @@ export default function PlayerScreen() {
   const {
     currentSong,
     isPlaying,
-    position,
-    duration,
     playMode,
     volume,
     togglePlayPause,
@@ -40,6 +39,7 @@ export default function PlayerScreen() {
     togglePlayMode,
     setVolume,
   } = usePlayer();
+  const { position, duration } = usePlaybackState();
   
   const [showVolume, setShowVolume] = useState(false);
 
@@ -81,7 +81,7 @@ export default function PlayerScreen() {
         <Image
           source={{ uri: currentSong.coverUrl }}
           style={styles.backgroundImage}
-          blurRadius={30}
+          blurRadius={8}
         />
         <LinearGradient
           colors={['rgba(10, 10, 15, 0.7)', CYBER.bg]}
@@ -364,9 +364,4 @@ const styles = StyleSheet.create({
     backgroundColor: CYBER.card,
     borderRadius: 2,
   },
-  volumeFill: {
-    height: '100%',
-    backgroundColor: CYBER.primary,
-    borderRadius: 2,
-  },
-});
+  volumeFi
