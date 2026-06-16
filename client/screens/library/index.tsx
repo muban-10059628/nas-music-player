@@ -4,7 +4,7 @@ import { useSafeRouter } from '@/hooks/useSafeRouter';
 import { usePlayer } from '@/contexts/PlayerContext';
 import { Screen } from '@/components/Screen';
 import MiniPlayer from '@/components/MiniPlayer';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 
 const CYBER = {
   primary: '#00F0FF',
@@ -65,12 +65,21 @@ export default function LibraryScreen() {
         setArtists(await res.json());
       } else {
         const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/songs`);
-        setSongs(await res.json());
+        const data = await res.json();
+        setSongs(data);
       }
     } catch (err) {
       console.error('Failed to fetch data:', err);
     }
   };
+
+  const handleShuffleAll = useCallback(() => {
+    const all = activeTab === 'songs' ? songs : [];
+    if (all.length > 0) {
+      const shuffled = [...all].sort(() => Math.random() - 0.5);
+      play(shuffled[0] as any);
+    }
+  }, [activeTab, songs, play]);
 
   const handleAlbumPress = (album: Album) => {
     router.push('/album', { id: album.id });
@@ -80,9 +89,9 @@ export default function LibraryScreen() {
     router.push('/artist', { id: artist.id });
   };
 
-  const handleSongPress = (song: Song, index: number) => {
+  const handleSongPress = useCallback((song: Song) => {
     play(song as any);
-  };
+  }, [play]);
 
   const formatDuration = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -116,7 +125,7 @@ export default function LibraryScreen() {
   );
 
   const renderSongItem = ({ item, index }: { item: Song; index: number }) => (
-    <TouchableOpacity style={styles.songItem} onPress={() => handleSongPress(item, index)}>
+    <TouchableOpacity style={styles.songItem} onPress={() => handleSongPress(item)}>
       <View style={styles.songIndex}>
         <Text style={styles.songIndexText}>{index + 1}</Text>
       </View>
@@ -144,18 +153,25 @@ export default function LibraryScreen() {
         </View>
 
         {/* Tabs */}
-        <View style={styles.tabContainer}>
-          {tabs.map((tab) => (
-            <TouchableOpacity
-              key={tab.key}
-              style={[styles.tab, activeTab === tab.key && styles.tabActive]}
-              onPress={() => setActiveTab(tab.key)}
-            >
-              <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
-                {tab.label}
-              </Text>
+        <View style={styles.tabRow}>
+          <View style={styles.tabContainer}>
+            {tabs.map((tab) => (
+              <TouchableOpacity
+                key={tab.key}
+                style={[styles.tab, activeTab === tab.key && styles.tabActive]}
+                onPress={() => setActiveTab(tab.key)}
+              >
+                <Text style={[styles.tabText, activeTab === tab.key && styles.tabTextActive]}>
+                  {tab.label}
+                </Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+          {activeTab === 'songs' && songs.length > 0 && (
+            <TouchableOpacity style={styles.shuffleBtn} onPress={handleShuffleAll}>
+              <Ionicons name="shuffle" size={20} color={CYBER.primary} />
             </TouchableOpacity>
-          ))}
+          )}
         </View>
 
         {/* Content */}
@@ -209,11 +225,17 @@ const styles = StyleSheet.create({
     color: CYBER.text,
     letterSpacing: 0.5,
   },
+  tabRow: {
+    flexDirection: 'row', alignItems: 'center',
+    paddingHorizontal: 20, marginBottom: 16, gap: 8,
+  },
   tabContainer: {
-    flexDirection: 'row',
-    paddingHorizontal: 20,
-    marginBottom: 16,
-    gap: 8,
+    flexDirection: 'row', flex: 1, gap: 8,
+  },
+  shuffleBtn: {
+    width: 40, height: 40, borderRadius: 8,
+    backgroundColor: CYBER.card, borderWidth: 1, borderColor: CYBER.border,
+    alignItems: 'center', justifyContent: 'center',
   },
   tab: {
     paddingVertical: 10,
@@ -298,56 +320,4 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 12,
   },
-  artistName: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: CYBER.text,
-  },
-  artistMeta: {
-    fontSize: 12,
-    color: CYBER.muted,
-    marginTop: 2,
-  },
-  songItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingVertical: 10,
-    borderBottomWidth: 1,
-    borderBottomColor: CYBER.border,
-  },
-  songIndex: {
-    width: 30,
-    alignItems: 'center',
-  },
-  songIndexText: {
-    fontSize: 14,
-    color: CYBER.muted,
-  },
-  songCover: {
-    width: 44,
-    height: 44,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: CYBER.border,
-    marginLeft: 8,
-  },
-  songInfo: {
-    flex: 1,
-    marginLeft: 10,
-  },
-  songTitle: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: CYBER.text,
-  },
-  songArtist: {
-    fontSize: 12,
-    color: CYBER.muted,
-    marginTop: 2,
-  },
-  songDuration: {
-    fontSize: 12,
-    color: CYBER.muted,
-    fontFamily: 'monospace',
-  },
-});
+  

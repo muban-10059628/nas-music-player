@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef } from 'react';
+import { View, Text, Image, TouchableOpacity, StyleSheet, PanResponder } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeRouter } from '@/hooks/useSafeRouter';
@@ -25,8 +25,9 @@ interface MiniPlayerProps {
 
 export default function MiniPlayer({ onPress }: MiniPlayerProps) {
   const router = useSafeRouter();
-  const { currentSong, isPlaying, togglePlayPause, next } = usePlayer();
+  const { currentSong, isPlaying, togglePlayPause, next, previous } = usePlayer();
   const { position, duration } = usePlaybackState();
+  const panRef = useRef(0);
 
   if (!currentSong) return null;
 
@@ -40,51 +41,58 @@ export default function MiniPlayer({ onPress }: MiniPlayerProps) {
 
   const progress = duration > 0 ? position / duration : 0;
 
+  // 滑动切歌
+  const panResponder = useRef(PanResponder.create({
+    onStartShouldSetPanResponder: () => true,
+    onPanResponderMove: (_, gs) => { panRef.current = gs.dx; },
+    onPanResponderRelease: (_, gs) => {
+      if (gs.dx < -60) next();
+      else if (gs.dx > 60) previous();
+    },
+  })).current;
+
   return (
-    <TouchableOpacity 
-      style={styles.container} 
+    <TouchableOpacity
+      style={styles.container}
       onPress={handlePress}
       activeOpacity={0.9}
+      {...panResponder.panHandlers}
     >
       {/* Progress Bar */}
       <View style={styles.progressContainer}>
         <View style={[styles.progressBar, { width: `${progress * 100}%` }]} />
       </View>
-      
+
       <LinearGradient
         colors={['rgba(18, 18, 26, 0.98)', 'rgba(10, 10, 15, 0.99)']}
         style={styles.content}
       >
         {/* Album Cover */}
         <Image source={{ uri: currentSong.coverUrl }} style={styles.cover} />
-        
+
         {/* Song Info */}
         <View style={styles.info}>
           <Text style={styles.title} numberOfLines={1}>{currentSong.title}</Text>
           <Text style={styles.artist} numberOfLines={1}>{currentSong.artist}</Text>
         </View>
-        
+
         {/* Controls */}
         <View style={styles.controls}>
-          <TouchableOpacity 
-            style={styles.controlButton} 
+          <TouchableOpacity
+            style={styles.controlButton}
             onPress={togglePlayPause}
           >
-            <Ionicons 
-              name={isPlaying ? 'pause' : 'play'} 
-              size={28} 
-              color={CYBER.primary} 
+            <Ionicons
+              name={isPlaying ? 'pause' : 'play'}
+              size={28}
+              color={CYBER.primary}
             />
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={styles.controlButton} 
-            onPress={next}
+          <TouchableOpacity
+            style={styles.controlButton}
+            onPress={() => router.push('/queue')}
           >
-            <Ionicons 
-              name="play-skip-forward" 
-              size={24} 
-              color={CYBER.muted} 
-            />
+            <Ionicons name="list" size={22} color={CYBER.muted} />
           </TouchableOpacity>
         </View>
       </LinearGradient>
@@ -120,25 +128,4 @@ const styles = StyleSheet.create({
     paddingHorizontal: 12,
     paddingVertical: 10,
   },
-  cover: {
-    width: 48,
-    height: 48,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: CYBER.border,
-  },
-  info: {
-    flex: 1,
-    marginLeft: 12,
-  },
-  title: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: CYBER.text,
-  },
-  artist: {
-    fontSize: 12,
-    color: CYBER.muted,
-    marginTop: 2,
-  },
-  controls: {
+  cov

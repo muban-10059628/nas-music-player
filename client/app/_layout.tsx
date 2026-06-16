@@ -26,8 +26,4 @@ export default function RootLayout() {
         <Stack.Screen name="player" options={{ title: "Now Playing", animation: 'slide_from_bottom' }} />
         <Stack.Screen name="album" options={{ title: "Album" }} />
         <Stack.Screen name="artist" options={{ title: "Artist" }} />
-      </Stack>
-      <Toast />
-    </Provider>
-  );
-}
+        <Stack.Screen name="queue" options={{ title: "

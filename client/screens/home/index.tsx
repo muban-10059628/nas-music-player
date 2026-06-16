@@ -36,13 +36,15 @@ interface Album {
 
 export default function HomeScreen() {
   const router = useSafeRouter();
-  const { play } = usePlayer();
+  const { play, setQueue } = usePlayer();
   const [recentPlays, setRecentPlays] = useState<RecentItem[]>([]);
   const [albums, setAlbums] = useState<Album[]>([]);
+  const [randomSongs, setRandomSongs] = useState<RecentItem[]>([]);
 
   useEffect(() => {
     fetchRecentPlays();
     fetchAlbums();
+    fetchRandomSongs();
   }, []);
 
   const fetchRecentPlays = async () => {
@@ -59,9 +61,23 @@ export default function HomeScreen() {
     try {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/albums`);
       const data = await res.json();
-      setAlbums(data.slice(0, 6));
+      setAlbums(data.slice(0, 8));
     } catch (err) {
       console.error('Failed to fetch albums:', err);
+    }
+  };
+
+  const fetchRandomSongs = async () => {
+    try {
+      const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/songs`);
+      const data = await res.json();
+      // 随机取
+      const shuffled = [...data].sort(() => Math.random() - 0.5);
+      setRandomSongs(shuffled.slice(0, 10).map((s: any) => ({
+        id: s.id, title: s.title, artist: s.artist, coverUrl: s.coverUrl, playedAt: 0,
+      })));
+    } catch (err) {
+      console.error('Failed to fetch random songs:', err);
     }
   };
 
@@ -70,7 +86,8 @@ export default function HomeScreen() {
       const res = await fetch(`${process.env.EXPO_PUBLIC_BACKEND_BASE_URL}/api/v1/songs`);
       const songs = await res.json();
       if (songs.length > 0) {
-        play(songs[0]);
+        const shuffled = [...songs].sort(() => Math.random() - 0.5);
+        setQueue(shuffled, 0);
       }
     } catch (err) {
       console.error('Failed to play all:', err);
@@ -84,6 +101,13 @@ export default function HomeScreen() {
   const handlePlaySong = useCallback((item: RecentItem) => {
     play(item as any);
   }, [play]);
+
+  const handlePlayRandom = useCallback(() => {
+    if (randomSongs.length > 0) {
+      const songs = [...randomSongs].sort(() => Math.random() - 0.5);
+      play(songs[0] as any);
+    }
+  }, [randomSongs, play]);
 
   // 使用 memo 化的列表项组件，避免每次滚动重新创建函数
   const RecentItem = memo(({ item, onPress }: { item: RecentItem; onPress: (item: RecentItem) => void }) => (
@@ -139,7 +163,7 @@ export default function HomeScreen() {
                 style={styles.playAllGradient}
               >
                 <Ionicons name="play" size={20} color={CYBER.bg} />
-                <Text style={styles.playAllText}>播放全部</Text>
+                <Text style={styles.playAllText}>随机播放全部</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
@@ -159,9 +183,24 @@ export default function HomeScreen() {
             </View>
           )}
 
+          {/* Random Songs */}
+          {randomSongs.length > 0 && (
+            <View style={styles.section}>
+              <Text style={styles.sectionTitle}>随机推荐</Text>
+              <FlatList
+                horizontal
+                data={randomSongs}
+                renderItem={renderRecentItem}
+                keyExtractor={(item) => item.id}
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.recentList}
+              />
+            </View>
+          )}
+
           {/* Featured Albums */}
           <View style={styles.section}>
-            <Text style={styles.sectionTitle}>推荐专辑</Text>
+            <Text style={styles.sectionTitle}>专辑推荐</Text>
             <FlatList
               horizontal
               data={albums}
@@ -203,87 +242,4 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   title: {
-    fontSize: 28,
-    fontWeight: '700',
-    color: CYBER.text,
-  },
-  subtitle: {
-    fontSize: 14,
-    color: CYBER.muted,
-    marginTop: 4,
-  },
-  quickActions: {
-    paddingHorizontal: 20,
-    marginBottom: 24,
-  },
-  playAllButton: {
-    borderRadius: 8,
-    overflow: 'hidden',
-  },
-  playAllGradient: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 14,
-    gap: 8,
-  },
-  playAllText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: CYBER.bg,
-    letterSpacing: 1,
-  },
-  section: {
-    marginBottom: 24,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-    color: CYBER.text,
-    marginBottom: 16,
-    paddingHorizontal: 20,
-    letterSpacing: 0.5,
-  },
-  recentList: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
-  recentItem: {
-    width: 140,
-    alignItems: 'center',
-  },
-  recentCover: {
-    width: 120,
-    height: 120,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: CYBER.border,
-    marginBottom: 8,
-  },
-  recentInfo: {
-    alignItems: 'center',
-    width: '100%',
-    paddingHorizontal: 4,
-  },
-  recentTitle: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: CYBER.text,
-    textAlign: 'center',
-  },
-  recentArtist: {
-    fontSize: 11,
-    color: CYBER.muted,
-    marginTop: 2,
-    textAlign: 'center',
-  },
-  albumsList: {
-    paddingHorizontal: 20,
-    gap: 12,
-  },
-  albumCard: {
-    width: 140,
-  },
-  albumCover: {
-    width: 140,
-  
+    fontSize: 2
